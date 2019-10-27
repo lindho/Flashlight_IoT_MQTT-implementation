@@ -7,17 +7,19 @@ using System.Net.Sockets;
 
 /// <summary>
 /// Script to handle the connection to the free HiveMQ MQTT broker using the <see cref="MqttClientExtension.class"/>
+/// Can only be attached to a single game object in the game scene
 /// </summary>
-public class BrokerConnection : MonoBehaviour {
+public class BrokerConnection : MonoBehaviour
+{
+
+    public static BrokerConnection Instance = null;
 
     [Header("HIVE MQ BROKER")]
     public bool _useHiveMqBroker;
     [Header("Manual ip address input (can be empty if 'use HiveMq broker' is checked)")]
     public string brokerIpAddress;
-
-    [Header("MQTT client script reference")]
     public MqttClientExtension client;
-    
+
     [HideInInspector] public string[] topics;
 
     [Header("Animator located in 'BottomBarPanel' game object")]
@@ -26,7 +28,7 @@ public class BrokerConnection : MonoBehaviour {
     //Member variables
     private string clientId;
     private bool Active;
-	private AndroidJavaObject camera1;
+    private AndroidJavaObject camera1;
 
     /// <summary>
     /// <description>
@@ -38,19 +40,35 @@ public class BrokerConnection : MonoBehaviour {
     /// </summary>
     private void Awake()
     {
+        SingletonCheck();
         clientId = Guid.NewGuid().ToString();
         if (_useHiveMqBroker)
             brokerIpAddress = getHostByName();
-        topics = new string[] { "phone/myflashlight"};
+        topics = new string[] { "phone/myflashlight" };
         client = new MqttClientExtension(IPAddress.Parse(brokerIpAddress), 1883, false, null);
+    }
+
+    /// <summary>
+    /// <description>Function that only allows one intance of this script to exist in the game scene</description>
+    /// </summary>
+    public void SingletonCheck()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
     /// <summary>
     /// <description> Invokes <see cref="DelayedAttribute"/> after 2 seconds </description>
     /// </summary>
-    void Start ()
+    void Start()
     {
-        Invoke("DelayedSetup", 2);   
+        Invoke("DelayedSetup", 2);
     }
 
     /// <summary>
@@ -65,107 +83,112 @@ public class BrokerConnection : MonoBehaviour {
     }
 
     /// <summary>
-    /// Method for 
+    /// Funtion to handle message specific actions
     /// </summary>
     /// <param name="sender"></param>
-    /// <param name="e"></param>
-    void client_MqttMsgPublishReceived(object sender, MqttMsgPublishEventArgs e) { 
-		Debug.Log("Received: " + System.Text.Encoding.UTF8.GetString(e.Message)  );
+    /// <param name="e">the message</param>
+    void client_MqttMsgPublishReceived(object sender, MqttMsgPublishEventArgs e)
+    {
+        Debug.Log("Received: " + System.Text.Encoding.UTF8.GetString(e.Message));
 
-		if (System.Text.Encoding.UTF8.GetString (e.Message) == "Hej") {
-			client.Publish (topics[0], System.Text.Encoding.UTF8.GetBytes ("Sending from Unity3D!!!"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
-		}
+        if (System.Text.Encoding.UTF8.GetString(e.Message) == "Hej")
+        {
+            client.Publish(topics[0], System.Text.Encoding.UTF8.GetBytes("Sending from Unity3D!!!"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
+        }
 #if (UNITY_ANDROID )
-        else if (System.Text.Encoding.UTF8.GetString (e.Message) == "flashlight on" && Application.platform == RuntimePlatform.Android) {
-			Flashlight_Start();
+        else if (System.Text.Encoding.UTF8.GetString(e.Message) == "flashlight on" && Application.platform == RuntimePlatform.Android)
+        {
+            Flashlight_Start();
 
-		} else if (System.Text.Encoding.UTF8.GetString (e.Message) == "flashlight off") {
-			Flashlight_Stop();
-    }
+        }
+        else if (System.Text.Encoding.UTF8.GetString(e.Message) == "flashlight off")
+        {
+            Flashlight_Stop();
+        }
 #endif
 
-        else if (System.Text.Encoding.UTF8.GetString (e.Message) == "flashlight active" && Application.platform == RuntimePlatform.Android) {
-			Active = true;
-		} else if (System.Text.Encoding.UTF8.GetString (e.Message) == "flashlight not active" && Application.platform == RuntimePlatform.Android) {
-			Active = false;
-		}
-	}
+        else if (System.Text.Encoding.UTF8.GetString(e.Message) == "flashlight active" && Application.platform == RuntimePlatform.Android)
+        {
+            Active = true;
+        }
+        else if (System.Text.Encoding.UTF8.GetString(e.Message) == "flashlight not active" && Application.platform == RuntimePlatform.Android)
+        {
+            Active = false;
+        }
+    }
 
- //   void OnGUI(){
-	//	GUILayout.BeginArea(new Rect(Screen.width * 0.35f, Screen.height * 0.9f, Screen.width * 0.3f, Screen.height * 0.3f));
-	//	if (!Active){
-	//		if (GUILayout.Button("ENABLE FLASHLIGHT"))
-	//			client.Publish (topics[0], System.Text.Encoding.UTF8.GetBytes ("flashlight on"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, false);
-	//	}
-	//	else{
-	//		if (GUILayout.Button("DISABLE FLASHLIGHT"))
-	//			client.Publish (topics[0], System.Text.Encoding.UTF8.GetBytes ("flashlight off"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, false);
-	//	}
-	//	GUILayout.EndArea();
-	//}
-		
-	void Flashlight_Start(){
+    void Flashlight_Start()
+    {
         int camID = 0;
-		AndroidJavaClass cameraClass = new AndroidJavaClass("android.hardware.Camera");
-		WebCamDevice[] devices = WebCamTexture.devices;
+        AndroidJavaClass cameraClass = new AndroidJavaClass("android.hardware.Camera");
+        WebCamDevice[] devices = WebCamTexture.devices;
 
         //New
         AndroidJavaObject androidJavaObject = new AndroidJavaObject("android.hardware.Camera", camID);
 
+        camera1 = cameraClass.CallStatic<AndroidJavaObject>("open", camID);
 
-		camera1 = cameraClass.CallStatic<AndroidJavaObject>("open", camID);
 
-
-        if (camera1 != null){
-			AndroidJavaObject cameraParameters = camera1.Call<AndroidJavaObject>("getParameters");
-			cameraParameters.Call("setFlashMode", "torch");
-			camera1.Call("setParameters", cameraParameters);
-			camera1.Call("startPreview");
-			//Active = true;
-			client.Publish (topics[0], System.Text.Encoding.UTF8.GetBytes ("flashlight active"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, false);
+        if (camera1 != null)
+        {
+            AndroidJavaObject cameraParameters = camera1.Call<AndroidJavaObject>("getParameters");
+            cameraParameters.Call("setFlashMode", "torch");
+            camera1.Call("setParameters", cameraParameters);
+            camera1.Call("startPreview");
+            //Active = true;
+            client.Publish(topics[0], System.Text.Encoding.UTF8.GetBytes("flashlight active"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, false);
         }
-		else{
-			Debug.LogError("[CameraParametersAndroid] Camera not available");
-		}
-	}
+        else
+        {
+            Debug.LogError("[CameraParametersAndroid] Camera not available");
+        }
+    }
 
-	void Flashlight_Stop(){
-		if (camera1 != null){
-			camera1.Call("stopPreview");
-			camera1.Call("release");
-			//Active = false;
-			client.Publish (topics[0], System.Text.Encoding.UTF8.GetBytes ("flashlight not active"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, false);
-		}
-		else{
-			Debug.LogError("[CameraParametersAndroid] Camera not available");
-		}
-	}
+    void Flashlight_Stop()
+    {
+        if (camera1 != null)
+        {
+            camera1.Call("stopPreview");
+            camera1.Call("release");
+            //Active = false;
+            client.Publish(topics[0], System.Text.Encoding.UTF8.GetBytes("flashlight not active"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, false);
+        }
+        else
+        {
+            Debug.LogError("[CameraParametersAndroid] Camera not available");
+        }
+    }
 
     void OnApplicationQuit()
     {
-        //if (client.IsConnected)
-        //{
-            client.Disconnect();
-        //}
+        client.Disconnect();
     }
 
-	public void Subscribe(string topicName, byte qosLevel){
-		client.Subscribe (new string[] { topicName }, new byte[]{ qosLevel });
-	}
+    public void Subscribe(string topicName, byte qosLevel)
+    {
+        client.Subscribe(new string[] { topicName }, new byte[] { qosLevel });
+    }
 
-	public void Unsubscribe(string topicName){
-		client.Unsubscribe (new string[] { topicName });
-	}
+    public void Unsubscribe(string topicName)
+    {
+        client.Unsubscribe(new string[] { topicName });
+    }
 
-    public void RemoveTopicFromList(string topicName) {
+    public void RemoveTopicFromList(string topicName)
+    {
         client.RemoveButton(topicName);
     }
 
     public void SendMessagetoTopic(string message, string messageTopic, byte qosLevel)
     {
-		client.Publish (messageTopic, System.Text.Encoding.UTF8.GetBytes (message), qosLevel, false);
-	}
+        client.Publish(messageTopic, System.Text.Encoding.UTF8.GetBytes(message), qosLevel, false);
+    }
 
+
+    /// <summary>
+    /// Automatically get the IP address of the broker
+    /// </summary>
+    /// <returns>return the ip address as a string</returns>
     public static string getHostByName()
     {
         try
@@ -195,11 +218,22 @@ public class BrokerConnection : MonoBehaviour {
         return "";
     }
 
-    public void UpdateIPAddress()
+    /// <summary>
+    /// Function to refresh the ip address
+    /// </summary>
+    public void UpdateIPAddress() //Not currently used in this project
     {
         brokerIpAddress = getHostByName();
     }
 
+
+    /// <summary>
+    /// Static call to andriod camera
+    /// </summary>
+    /// <param name="javaObject"></param>
+    /// <param name="methodName"></param>
+    /// <param name="args"></param>
+    /// <returns></returns>
     public static string safeCallStringMethod(AndroidJavaObject javaObject, string methodName, params object[] args)
     {
 #if UNITY_2018_2_OR_NEWER

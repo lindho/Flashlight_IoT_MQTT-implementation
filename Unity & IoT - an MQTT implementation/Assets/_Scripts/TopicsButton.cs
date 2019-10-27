@@ -5,31 +5,33 @@ using UnityEngine.UI;
 
 public class TopicsButton : MonoBehaviour
 {
-
-    private BrokerConnection IPconfigScript;
     private InputTopicField inputTopicField;
     private Text ButtonText;
-    private bool Active;
+    public bool Active { get; private set; }
+    private TopicButtonSpawner topicButtonSpawner;
 
     void Start()
     {
         inputTopicField = FindObjectOfType<InputTopicField>();
         Active = true;
-        IPconfigScript = FindObjectOfType<BrokerConnection>();
-        ButtonText = this.gameObject.GetComponentInChildren<Text>();
+        ButtonText = gameObject.GetComponentInChildren<Text>();
+    }
+
+    private void OnEnable()
+    {
+        topicButtonSpawner = GetComponentInParent<TopicButtonSpawner>();
     }
 
     public void OnButtonPress()
     {
         if (Active)
         {
-            IPconfigScript.Unsubscribe(ButtonText.text);
+            BrokerConnection.Instance.Unsubscribe(ButtonText.text);
             ButtonText.color = Color.red;
         }
         else
         {
-            //TODO fixa detta på något sätt
-            IPconfigScript.Subscribe(ButtonText.text, inputTopicField.QosLevel);
+            BrokerConnection.Instance.Subscribe(ButtonText.text, inputTopicField.QosLevel);
             ButtonText.color = Color.green;
         }
         Active = !Active;
@@ -37,8 +39,9 @@ public class TopicsButton : MonoBehaviour
 
     public void UnsubscribeAndDelete()
     {
-        IPconfigScript.RemoveTopicFromList(ButtonText.text);
-        IPconfigScript.Unsubscribe(ButtonText.text);
+        BrokerConnection.Instance.RemoveTopicFromList(ButtonText.text);
+        BrokerConnection.Instance.Unsubscribe(ButtonText.text);
+        topicButtonSpawner.RemoveTopicButtonFromList(this);
         StartCoroutine(DelayDelete());
     }
 
@@ -46,5 +49,10 @@ public class TopicsButton : MonoBehaviour
     {
         yield return new WaitForSeconds(.3f);
         Destroy(gameObject);
+    }
+
+    public string GetButtonText()
+    {
+        return ButtonText.text;
     }
 }

@@ -88,7 +88,7 @@ public class MqttClientExtension : MqttClient {
     /// <summary>
     /// <description>Function to remove topic from the topic list</description>
     /// </summary>
-    /// <param name="topic">The topic to be removed from the array</param>
+    /// <param name="topic">The topic to be removed from the list</param>
     public void RemoveButton(string topic)
     {
         if (topicList.Count == 0)

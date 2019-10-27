@@ -5,17 +5,14 @@ using UnityEngine.UI;
 
 public class InputTopicField : MonoBehaviour
 {
-
-    private BrokerConnection IPconfigScript;
     private InputField TopicInputField;
-    private Text InputTopicText; //never assigned in Start
+    //private Text InputTopicText; //never assigned in Start
 
     public Dropdown QoSlevelDD;
     [HideInInspector]public byte QosLevel { get; private set; }
 
     void Start()
     {
-        IPconfigScript = FindObjectOfType<BrokerConnection>();
         TopicInputField = GetComponent<InputField>();
     }
 
@@ -27,17 +24,17 @@ public class InputTopicField : MonoBehaviour
         }
         else
         {
-            IPconfigScript.Subscribe(NewTopic, QosLevel);
+            BrokerConnection.Instance.Subscribe(NewTopic, QosLevel);
             Debug.Log("Quality of service level: " + QosLevel);
             TopicInputField.text = "";
         }
     }
 
-    public void OnButtonPress()
-    {
-        IPconfigScript.Subscribe(InputTopicText.text, QosLevel);
-        Debug.Log(QosLevel);
-    }
+    //public void OnButtonPress()
+    //{
+    //    BrokerConnection.Instance.Subscribe(InputTopicText.text, QosLevel);
+    //    Debug.Log(QosLevel);
+    //}
 
     public void SelectQoSLevel(int index)
     {
@@ -53,6 +50,5 @@ public class InputTopicField : MonoBehaviour
                 QosLevel = (byte)global::QosLevel.EXACTLY_ONCE;
                 break;
         }
-        //QosLevel = (byte)index;
     }
 }
