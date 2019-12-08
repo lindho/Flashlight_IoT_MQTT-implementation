@@ -6,7 +6,8 @@ using uPLibrary.Networking.M2Mqtt;
 using uPLibrary.Networking.M2Mqtt.Messages;
 
 
-public class MqttClientExtension : MqttClient {
+public class MqttClientExtension : MqttClient
+{
 
 
     private readonly MqttClient client;
