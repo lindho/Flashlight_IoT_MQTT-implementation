@@ -4,14 +4,13 @@ using uPLibrary.Networking.M2Mqtt.Messages;
 using System;
 using System.Net.Sockets;
 
-
 /// <summary>
 /// Script to handle the connection to the free HiveMQ MQTT broker using the <see cref="MqttClientExtension.class"/>
 /// Can only be attached to a single game object in the game scene
 /// </summary>
 public class BrokerConnection : MonoBehaviour
 {
-    public AndroidCam AndriodCamera;
+
     public static BrokerConnection Instance = null;
 
     [Header("HIVE MQ BROKER")]
@@ -25,6 +24,7 @@ public class BrokerConnection : MonoBehaviour
     [Header("Animator located in 'BottomBarPanel' game object")]
     public Animator animator;
 
+    //Member variables
     private string clientId;
     private bool Active;
     private AndroidJavaObject camera1;
@@ -42,7 +42,7 @@ public class BrokerConnection : MonoBehaviour
         SingletonCheck();
         clientId = Guid.NewGuid().ToString();
         if (_useHiveMqBroker)
-            brokerIpAddress = GetHostByName();
+            brokerIpAddress = getHostByName();
         topics = new string[] { "phone/myflashlight" };
         client = new MqttClientExtension(IPAddress.Parse(brokerIpAddress), 1883, false, null);
     }
@@ -75,7 +75,7 @@ public class BrokerConnection : MonoBehaviour
     /// </summary>
     private void DelayedSetup()
     {
-        client.MqttMsgPublishReceived += Client_MqttMsgPublishReceived;
+        client.MqttMsgPublishReceived += client_MqttMsgPublishReceived;
         client.Connect(clientId);
         client.Subscribe(new string[] { topics[0] }, new byte[] { MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
         animator.SetTrigger("slide");
@@ -86,11 +86,11 @@ public class BrokerConnection : MonoBehaviour
     /// </summary>
     /// <param name="sender"></param>
     /// <param name="e">the message</param>
-    void Client_MqttMsgPublishReceived(object sender, MqttMsgPublishEventArgs e)
+    void client_MqttMsgPublishReceived(object sender, MqttMsgPublishEventArgs e)
     {
         Debug.Log("Received: " + System.Text.Encoding.UTF8.GetString(e.Message));
 
-        if (System.Text.Encoding.UTF8.GetString(e.Message) == "Hello")
+        if (System.Text.Encoding.UTF8.GetString(e.Message) == "Hej")
         {
             client.Publish(topics[0], System.Text.Encoding.UTF8.GetBytes("Sending from Unity3D!!!"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
         }
@@ -185,7 +185,7 @@ public class BrokerConnection : MonoBehaviour
     /// Automatically get the IP address of the broker
     /// </summary>
     /// <returns>return the ip address as a string</returns>
-    public static string GetHostByName()
+    public static string getHostByName()
     {
         try
         {
@@ -219,43 +219,6 @@ public class BrokerConnection : MonoBehaviour
     /// </summary>
     public void UpdateIPAddress() //Not currently used in this project
     {
-        brokerIpAddress = GetHostByName();
+        brokerIpAddress = getHostByName();
     }
-
-
-//    /// <summary>
-//    /// Static call to andriod camera
-//    /// </summary>
-//    /// <param name="javaObject"></param>
-//    /// <param name="methodName"></param>
-//    /// <param name="args"></param>
-//    /// <returns></returns>
-//    public static string SafeCallStringMethod(AndroidJavaObject javaObject, string methodName, params object[] args)
-//    {
-//#if UNITY_2018_2_OR_NEWER
-//        if (args == null) args = new object[] { null };
-//        IntPtr methodID = AndroidJNIHelper.GetMethodID<string>(javaObject.GetRawClass(), methodName, args, false);
-//        jvalue[] jniArgs = AndroidJNIHelper.CreateJNIArgArray(args);
-
-//        try
-//        {
-//            IntPtr returnValue = AndroidJNI.CallObjectMethod(javaObject.GetRawObject(), methodID, jniArgs);
-//            if (IntPtr.Zero != returnValue)
-//            {
-//                var val = AndroidJNI.GetStringUTFChars(returnValue);
-//                AndroidJNI.DeleteLocalRef(returnValue);
-//                return val;
-//            }
-//        }
-//        finally
-//        {
-//            AndroidJNIHelper.DeleteJNIArgArray(args, jniArgs);
-//        }
-
-//        return null;
-//#else
-//            return  javaObject.Call<string>(methodName, args);
-//#endif
-//    }
-
 }
