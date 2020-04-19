@@ -10,7 +10,6 @@ using System.Net.Sockets;
 /// </summary>
 public class BrokerConnection : MonoBehaviour
 {
-
     public static BrokerConnection Instance = null;
 
     [Header("HIVE MQ BROKER")]
@@ -24,10 +23,13 @@ public class BrokerConnection : MonoBehaviour
     [Header("Animator located in 'BottomBarPanel' game object")]
     public Animator animator;
 
-    //Member variables
     private string clientId;
     private bool Active;
     private AndroidJavaObject camera1;
+
+
+    [Header("Android Camera Script")]
+    public AndroidCamera AndroidCamera;
 
     /// <summary>
     /// <description>
@@ -42,7 +44,7 @@ public class BrokerConnection : MonoBehaviour
         SingletonCheck();
         clientId = Guid.NewGuid().ToString();
         if (_useHiveMqBroker)
-            brokerIpAddress = getHostByName();
+            brokerIpAddress = GetHostByName();
         topics = new string[] { "phone/myflashlight" };
         client = new MqttClientExtension(IPAddress.Parse(brokerIpAddress), 1883, false, null);
     }
@@ -68,6 +70,9 @@ public class BrokerConnection : MonoBehaviour
     void Start()
     {
         Invoke("DelayedSetup", 2);
+#if (UNITY_ANDROID && !UNITY_EDITOR)
+        AndroidCamera = gameObject.GetComponent<AndroidCamera>();
+#endif
     }
 
     /// <summary>
@@ -77,8 +82,8 @@ public class BrokerConnection : MonoBehaviour
     {
         client.MqttMsgPublishReceived += client_MqttMsgPublishReceived;
         client.Connect(clientId);
-        client.Subscribe(new string[] { topics[0] }, new byte[] { MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
         animator.SetTrigger("slide");
+        client.Subscribe(new string[] { topics[0] }, new byte[] { MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
     }
 
     /// <summary>
@@ -94,15 +99,17 @@ public class BrokerConnection : MonoBehaviour
         {
             client.Publish(topics[0], System.Text.Encoding.UTF8.GetBytes("Sending from Unity3D!!!"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
         }
-#if (UNITY_ANDROID )
+#if (UNITY_ANDROID && !UNITY_EDITOR)
         else if (System.Text.Encoding.UTF8.GetString(e.Message) == "flashlight on" && Application.platform == RuntimePlatform.Android)
         {
-            Flashlight_Start();
+            //Flashlight_Start();
+            AndroidCamera.EnableFlash();
 
         }
         else if (System.Text.Encoding.UTF8.GetString(e.Message) == "flashlight off")
         {
-            Flashlight_Stop();
+            //Flashlight_Stop();
+            AndroidCamera.StopFlash();
         }
 #endif
 
@@ -185,7 +192,7 @@ public class BrokerConnection : MonoBehaviour
     /// Automatically get the IP address of the broker
     /// </summary>
     /// <returns>return the ip address as a string</returns>
-    public static string getHostByName()
+    public string GetHostByName()
     {
         try
         {
@@ -219,6 +226,6 @@ public class BrokerConnection : MonoBehaviour
     /// </summary>
     public void UpdateIPAddress() //Not currently used in this project
     {
-        brokerIpAddress = getHostByName();
+        brokerIpAddress = GetHostByName();
     }
 }

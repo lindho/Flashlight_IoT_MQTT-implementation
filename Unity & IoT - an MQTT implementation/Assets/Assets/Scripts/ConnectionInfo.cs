@@ -8,43 +8,27 @@ using UnityEngine.UI;
 
 public class ConnectionInfo : MonoBehaviour
 {
-    public GameObject BrokerConnection;
+    private Text ConnectionText;
     void Start()
     {
-        Text text = GetComponent<Text>();
-        text.text = "Connected to host: " + GetHostByName();
-    }
-    public static string GetHostByName()
-    {
-        try
-        {
-            IPHostEntry Hosts = Dns.GetHostEntry("mqtt-dashboard.com");
-            return Hosts.AddressList[0].ToString();
-        }
+        ConnectionText = GetComponent<Text>();
 
-        catch (SocketException e)
-        {
-            Debug.LogError("SocketException caught!!!");
-            Debug.LogError("Source : " + e.Source);
-            Debug.LogError("Message : " + e.Message);
-        }
-        catch (ArgumentNullException e)
-        {
-            Debug.LogError("ArgumentNullException caught!!!");
-            Debug.LogError("Source : " + e.Source);
-            Debug.LogError("Message : " + e.Message);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("Exception caught!!!");
-            Debug.LogError("Source : " + e.Source);
-            Debug.LogError("Message : " + e.Message);
-        }
-        return "";
+        StartCoroutine(PingHost(10f));
     }
 
-    void Update()
+    private IEnumerator PingHost(float waitTime)
     {
-        
+        float counter = 0f;
+
+        while (counter < waitTime)
+        {
+            counter += Time.deltaTime;
+            BrokerConnection.Instance.UpdateIPAddress();
+            ConnectionText.text = "Connected to host: " + BrokerConnection.Instance.GetHostByName();
+            yield return null;
+        }
     }
+
+
+
 }

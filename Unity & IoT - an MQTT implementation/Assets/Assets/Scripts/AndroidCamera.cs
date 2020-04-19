@@ -1,83 +1,36 @@
 ﻿using UnityEngine;
-
-public class AndroidCamera 
+public class AndroidCamera : MonoBehaviour
 {
+    private AndroidJavaClass unityClass = null;
+    private AndroidJavaObject unityActivity = null;
+    private AndroidJavaObject unityContext = null;
+    private AndroidJavaClass customClass = null;
+    private readonly string CAMERA_ID = "0";
 
-    AndroidJavaObject camera = null;
-    AndroidJavaObject cameraManager = null;
-
-
-    public AndroidCamera()
+#if (UNITY_ANDROID && !UNITY_EDITOR)
+    private void Start()
     {
-        WebCamDevice[] devices = WebCamTexture.devices;
-        Debug.Log("Camera Name:" + devices[0].name);
-
-        open();
+        SendActivityReference("com.example.iotflashlightcontroller.Flashlight");
     }
-
-    public void open()
-    {
-        if (camera == null)
-        {
-#if (UNITY_ANDROID)
-			AndroidJavaClass cameraClass = new AndroidJavaClass("android.hardware.camera2");
-			//camera = cameraClass.CallStatic<AndroidJavaObject>("open");
-            cameraManager = cameraClass.CallStatic<AndroidJavaClass>("CameraManager");
-
 #endif
-        }
+
+    private void SendActivityReference(string packageName)
+    {
+        unityClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+        unityActivity = unityClass.GetStatic<AndroidJavaObject>("currentActivity");
+        unityContext = unityActivity.Call<AndroidJavaObject>("getApplicationContext");
+
+        customClass = new AndroidJavaClass(packageName);
+        customClass.CallStatic("receiveContextInstance", unityContext);
     }
 
-    public void release()
+    public bool EnableFlash()
     {
-        if (camera != null)
-        {
-            LEDOff();
-
-            camera.Call("release");
-            camera = null;
-        }
+        return customClass.CallStatic<bool>("enableFlash", CAMERA_ID);
     }
 
-    public void StartPreview()
+    public bool StopFlash()
     {
-        if (camera != null)
-        {
-            cameraManager.CallStatic<AndroidJavaClass>("setTorchMode", "1", true);
-            //Debug.Log("AndroidCamera::startPreview()");
-            //LEDOn();
-            //camera.Call("startPreview");
-        }
-    }
-
-    public void StopPreview()
-    {
-        if (camera != null)
-        {
-            cameraManager.CallStatic<AndroidJavaClass>("setTorchMode", "1", false);
-            //Debug.Log("AndroidCamera::stopPreview()");
-            //LEDOff();
-            //camera.Call("stopPreview");
-        }
-    }
-
-    private void setFlashMode(string mode)
-    {
-        if (camera != null)
-        {
-            AndroidJavaObject cameraParameters = camera.Call<AndroidJavaObject>("getParameters");
-            cameraParameters.Call("setFlashMode", mode);
-            camera.Call("setParameters", cameraParameters);
-        }
-    }
-
-    public void LEDOn()
-    {
-        setFlashMode("torch");
-    }
-
-    public void LEDOff()
-    {
-        setFlashMode("off");
+        return customClass.CallStatic<bool>("stopFlash", CAMERA_ID);
     }
 }
